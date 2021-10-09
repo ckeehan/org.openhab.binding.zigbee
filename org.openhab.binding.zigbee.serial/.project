@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <projectDescription>
-	<name>org.openhab.binding.zigbee.console.ember</name>
+	<name>org.openhab.binding.zigbee.serial</name>
 	<comment></comment>
 	<projects>
 	</projects>
@@ -22,7 +22,7 @@
 	</natures>
 	<filteredResources>
 		<filter>
-			<id>1631892441862</id>
+			<id>1631892441873</id>
 			<name></name>
 			<type>30</type>
 			<matcher>
