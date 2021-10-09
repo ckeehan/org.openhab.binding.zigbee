@@ -31,6 +31,7 @@ import org.openhab.binding.zigbee.converter.ZigBeeBaseChannelConverter;
 import org.openhab.binding.zigbee.handler.ZigBeeThingHandler;
 import org.openhab.binding.zigbee.internal.converter.config.ZclLevelControlConfig;
 import org.openhab.binding.zigbee.internal.converter.config.ZclReportingConfig;
+import org.openhab.binding.zigbee.internal.converter.config.ZclLevelReverseConfig;
 import org.openhab.core.config.core.Configuration;
 import org.openhab.core.library.types.IncreaseDecreaseType;
 import org.openhab.core.library.types.OnOffType;
@@ -97,6 +98,7 @@ public class ZigBeeConverterSwitchLevel extends ZigBeeBaseChannelConverter
     private ZclAttribute attributeLevel;
 
     private ZclReportingConfig configReporting;
+    private ZclLevelReverseConfig configReverseControl;
     private ZclLevelControlConfig configLevelControl;
 
     private final AtomicBoolean currentOnOffState = new AtomicBoolean(true);
@@ -136,6 +138,8 @@ public class ZigBeeConverterSwitchLevel extends ZigBeeBaseChannelConverter
 
     private boolean initializeDeviceServer() {
         ZclReportingConfig reporting = new ZclReportingConfig(channel);
+
+        ZclLevelReverseConfig levelReverseControl = new ZclLevelReverseConfig(channel);
 
         ZclLevelControlCluster serverClusterLevelControl = (ZclLevelControlCluster) endpoint
                 .getInputCluster(ZclLevelControlCluster.CLUSTER_ID);
@@ -279,11 +283,13 @@ public class ZigBeeConverterSwitchLevel extends ZigBeeBaseChannelConverter
 
         // Create a configuration handler and get the available options
         configReporting = new ZclReportingConfig(channel);
+        configReverseControl = new ZclLevelReverseConfig(channel);
         configLevelControl = new ZclLevelControlConfig();
         configLevelControl.initialize(clusterLevelControlServer);
 
         configOptions = new ArrayList<>();
         configOptions.addAll(configReporting.getConfiguration());
+        configOptions.addAll(configReverseControl.getConfiguration());
         configOptions.addAll(configLevelControl.getConfiguration());
 
         return true;
@@ -380,6 +386,9 @@ public class ZigBeeConverterSwitchLevel extends ZigBeeBaseChannelConverter
      * @return command result future
      */
     private Future<CommandResult> handleOnOffCommand(OnOffType cmdOnOff) {
+        if (configReverseControl != null && configReverseControl.shouldInvertOnOff()) {
+            cmdOnOff = configReverseControl.invertCommand(cmdOnOff);
+        }
         if (clusterOnOffServer != null) {
             ZclOnOffCommand onOffCommand;
             if (cmdOnOff == OnOffType.ON) {
@@ -398,6 +407,9 @@ public class ZigBeeConverterSwitchLevel extends ZigBeeBaseChannelConverter
     }
 
     private Future<CommandResult> handlePercentCommand(PercentType cmdPercent) {
+        if (configReverseControl != null && configReverseControl.shouldInvertPercent()) {
+            cmdPercent = configReverseControl.invertCommand(cmdPercent);
+        }
         return moveToLevel(cmdPercent);
     }
 
@@ -494,6 +506,10 @@ public class ZigBeeConverterSwitchLevel extends ZigBeeBaseChannelConverter
             }
         }
 
+        if (configReverseControl != null) {
+            configReverseControl.updateConfiguration(currentConfiguration, updatedParameters);
+        }
+
         if (configLevelControl != null) {
             configLevelControl.updateConfiguration(currentConfiguration, updatedParameters);
         }
@@ -505,12 +521,18 @@ public class ZigBeeConverterSwitchLevel extends ZigBeeBaseChannelConverter
         if (attribute.getCluster() == ZclClusterType.LEVEL_CONTROL
                 && attribute.getId() == ZclLevelControlCluster.ATTR_CURRENTLEVEL) {
             lastLevel = levelToPercent((Integer) val);
+            if (configReverseControl != null && configReverseControl.shouldInvertPercent()) {
+                lastLevel = configReverseControl.invertCommand(lastLevel);
+            }
             if (currentOnOffState.get()) {
                 // Note that state is only updated if the current On/Off state is TRUE (ie ON)
                 updateChannelState(lastLevel);
             }
         } else if (attribute.getCluster() == ZclClusterType.ON_OFF && attribute.getId() == ZclOnOffCluster.ATTR_ONOFF) {
             if (attribute.getLastValue() != null) {
+                if (configReverseControl != null && configReverseControl.shouldInvertOnOff()) {
+                    val = configReverseControl.invertCommand((Boolean) val);
+                }
                 currentOnOffState.set((Boolean) val);
                 updateChannelState(currentOnOffState.get() ? lastLevel : OnOffType.OFF);
             }
