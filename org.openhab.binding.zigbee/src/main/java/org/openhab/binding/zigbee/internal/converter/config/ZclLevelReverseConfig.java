@@ -12,22 +12,25 @@
  */
 package org.openhab.binding.zigbee.internal.converter.config;
 
-import java.nio.channels.Channel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 
-import com.zsmartsystems.zigbee.zcl.ZclCluster;
-
 import org.eclipse.jdt.annotation.NonNull;
 import org.openhab.core.config.core.ConfigDescriptionParameter;
+import org.openhab.core.config.core.ConfigDescriptionParameter.Type;
 import org.openhab.core.config.core.ConfigDescriptionParameterBuilder;
+import org.openhab.core.config.core.Configuration;
+import org.openhab.core.library.types.UpDownType;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.PercentType;
-import org.openhab.core.library.types.UpDownType;
+import org.openhab.core.thing.Channel;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.zsmartsystems.zigbee.zcl.ZclCluster;
 
 /**
  * Configuration handler for inverting commands sent to and from the Level Control channel.
